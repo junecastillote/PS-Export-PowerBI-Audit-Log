@@ -89,15 +89,14 @@ Begin {
     }
 
     ## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
-    $sessionID = (New-Guid).GUID
-    $recordType = 'PowerBIAudit'
-
+    $script:sessionID = (New-Guid).GUID
+    $script:recordType = 'PowerBIAudit'
 }
 
 process {
     do {
         ## Run the Search-UnifiedAuditLog
-        $currentPageResult = Search-UnifiedAuditLog -SessionId $sessionId -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $recordType
+        $currentPageResult = Search-UnifiedAuditLog -SessionId $script:sessionID -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $script:recordType
         if ($currentPageResult) {
             ## Initialize the maximum results available variable once.
             if (!$maxResultCount) {
