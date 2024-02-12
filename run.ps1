@@ -14,4 +14,4 @@ $zipFileName = $(($csvFileName).Replace('.csv', '.zip'))
 
 $powerbi_logs = .\Get-PowerBIAuditLog.ps1 -StartDate $startDate -EndDate $endDate
 $powerbi_logs | Export-Csv -Path $csvFileName -NoTypeInformation -Force
-Compress-Archive -Path $csvFileName -DestinationPath $zipFileName -CompressionLevel Optimal
+Compress-Archive -Path $csvFileName -DestinationPath $zipFileName -CompressionLevel Optimal -Force
