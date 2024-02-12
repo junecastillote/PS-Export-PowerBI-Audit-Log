@@ -50,15 +50,21 @@ param (
     [DateTime]
     $EndDate = (Get-Date),
 
-    [Parameter()]
+    [Parameter(Mandatory)]
     [string]
-    $ExportFileName,
+    $OutputDirectory,
 
     [Parameter()]
-    [bool]
-    $ReturnResult = $true
+    [switch]
+    $ReturnResult
 )
 
+## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
+$script:sessionID = (New-Guid).GUID
+$script:recordType = 'PowerBIAudit'
+
+$script:retryCount = 0
+$script:maxRetryCount = 0
 
 ## Set progress bar visibility
 $ProgressPreference = 'Continue'
@@ -70,7 +76,7 @@ if ($PSVersionTable.PSEdition -eq 'Core') {
 
 #Region - Is Exchange Connected?
 try {
-    $null = (Get-OrganizationConfig -ErrorAction STOP).DisplayName
+    $orgName = (Get-OrganizationConfig -ErrorAction STOP).DisplayName
 }
 catch [System.Management.Automation.CommandNotFoundException] {
     "It looks like you forgot to connect to Remote Exchange PowerShell. You should do that first before asking me to do stuff for you." | Out-Default
@@ -89,7 +95,7 @@ catch {
 Function ExtractPBILogs {
     Search-UnifiedAuditLog -SessionId $script:sessionID -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $script:recordType
 }
-$script:retryCount = 0
+
 #EndRegion
 
 "Start Date: $($StartDate)" | Out-Default
@@ -107,14 +113,18 @@ if ($EndDate -le $StartDate) {
     return $null
 }
 
-## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
-$script:sessionID = (New-Guid).GUID
-$script:recordType = 'PowerBIAudit'
-
 ## Create or overwrite the export file.
-if ($ExportFileName) {
+if ($OutputDirectory) {
+    ## Test if the output directory exists
+    if (!(Test-Path $OutputDirectory)) {
+        "The output directory [$($OutputDirectory)] does not exist." | Out-Default
+        return $null
+    }
+
+    $csv_filename = "$($OutputDirectory)\$($orgName -replace ' ','-')_PowerBIAuditLogs_$(Get-Date $startDate -Format "yyyy-dd-MM_H-mm-ss")--$(Get-Date $endDate -Format "yyyy-dd-MM_H-mm-ss").csv"
+
     try {
-        $null = New-Item -ItemType File -Force -Path $ExportFileName -ErrorAction Stop
+        $null = New-Item -ItemType File -Force -Path $csv_filename -ErrorAction Stop
     }
     catch {
         ## If the export file cannot be created, exit the script.
@@ -124,16 +134,59 @@ if ($ExportFileName) {
     }
 }
 
+Function IsResultProblematic {
+    param (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        $inputObject
+    )
+    if ($inputObject[-1].ResultIndex -eq -1 -and $inputObject[-1].ResultCount -eq 0) {
+        return $true
+    }
+    else {
+        return $false
+    }
+}
+
+
 
 Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: Getting the first 100 records (0%)" -PercentComplete 0 -ErrorAction SilentlyContinue
 do {
     $currentPageResult = @(ExtractPBILogs)
+
+    if ($currentPageResult.Count -lt 1) {
+        "No results found" | Out-Default
+        return $null
+    }
+
+    if ($script:retryCount -gt $script:maxRetryCount) {
+        "The result's total count and indexes are problematic after two retries. This may be a temporary error. Try again after a few minutes." | Out-Default
+        return $null
+    }
+
+    if (($script:isProblematic = IsResultProblematic -inputObject $currentPageResult) -and ($script:retryCount -le 2)) {
+        $script:retryCount++
+        $script:sessionID = (New-Guid).Guid
+        "Retry # $($script:retryCount++)" | Out-Default
+    }
+}
+while ($script:isProblematic)
+
+## Initialize the maximum results available variable once.
+$maxResultCount = $($currentPageResult[-1].ResultCount)
+"Total entries: $($maxResultCount)" | Out-Default
+
+## Set the current page result count.
+$currentPageResultCount = $($currentPageResult[-1].ResultIndex)
+## Compute the completion percentage
+$percentComplete = ($currentPageResultCount * 100) / $maxResultCount
+## Display the progress
+Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
+
+## Retrieve the rest of the audit log entries
+do {
+    $currentPageResult = @(ExtractPBILogs)
     if ($currentPageResult) {
-        ## Initialize the maximum results available variable once.
-        if (!$maxResultCount) {
-            $maxResultCount = $($currentPageResult[-1].ResultCount)
-            "Total entries: $($maxResultCount)" | Out-Default
-        }
         ## Set the current page result count.
         $currentPageResultCount = $($currentPageResult[-1].ResultIndex)
         ## Compute the completion percentage
@@ -145,8 +198,8 @@ do {
             $currentPageResult
         }
         ## Export result to file
-        if ($ExportFileName) {
-            $currentPageResult | Export-Csv -Path $ExportFileName -Append
+        if ($OutputDirectory) {
+            $currentPageResult | Export-Csv -Path $csv_filename -Append
         }
     }
 }
@@ -156,14 +209,16 @@ while (
         ($currentPageResultCount -lt $maxResultCount) -or ($currentPageResult.Count -gt 0)
 )
 
-
 Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue -Completed
 
-if ($ExportFileName) {
-    $csv_file = Get-ChildItem -Path $ExportFileName
-    $zip_filename = $(($csv_file.FullName.ToString()).Replace($(((Split-Path $csv_file.FullName -Leaf).Split('.')[-1])), 'zip'))
-    $null = Compress-Archive -Path $ExportFileName -DestinationPath $zip_filename -CompressionLevel Optimal -Force
+if ($OutputDirectory) {
+    $csv_file = Get-ChildItem -Path $csv_filename
+    $zip_filename = $(($csv_file.FullName.ToString()).Replace('.csv', '.zip'))
+
+    "Compressing results file..." | Out-Default
+    $null = Compress-Archive -Path $csv_filename -DestinationPath $zip_filename -CompressionLevel Optimal -Force
     Start-Sleep -Seconds 2
+
     $zip_file = Get-ChildItem -Path $zip_filename
     "CSV result: $($csv_file.FullName)" | Out-Default
     "ZIP result: $($zip_file.FullName)" | Out-Default
