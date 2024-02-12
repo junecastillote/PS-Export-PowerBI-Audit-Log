@@ -42,13 +42,13 @@
 #>
 [CmdletBinding()]
 param (
-    [Parameter()]
+    [Parameter(Mandatory)]
     [DateTime]
-    $StartDate = (Get-Date).AddHours(-24),
+    $StartDate,
 
-    [Parameter()]
+    [Parameter(Mandatory)]
     [DateTime]
-    $EndDate = (Get-Date),
+    $EndDate,
 
     [Parameter(Mandatory)]
     [string]
@@ -160,11 +160,11 @@ do {
     }
 
     if ($script:retryCount -gt $script:maxRetryCount) {
-        "The result's total count and indexes are problematic after two retries. This may be a temporary error. Try again after a few minutes." | Out-Default
+        "The result's total count and indexes are problematic after $($script:maxRetryCount) retries. This may be a temporary error. Try again after a few minutes." | Out-Default
         return $null
     }
 
-    if (($script:isProblematic = IsResultProblematic -inputObject $currentPageResult) -and ($script:retryCount -le 2)) {
+    if (($script:isProblematic = IsResultProblematic -inputObject $currentPageResult) -and ($script:retryCount -le $script:maxRetryCount)) {
         $script:retryCount++
         $script:sessionID = (New-Guid).Guid
         "Retry # $($script:retryCount++)" | Out-Default
@@ -182,6 +182,15 @@ $currentPageResultCount = $($currentPageResult[-1].ResultIndex)
 $percentComplete = ($currentPageResultCount * 100) / $maxResultCount
 ## Display the progress
 Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
+## Display the current page results
+if ($ReturnResult) {
+    $currentPageResult
+}
+## Export result to file
+if ($OutputDirectory) {
+    $currentPageResult | Export-Csv -Path $csv_filename -Append
+}
+
 
 ## Retrieve the rest of the audit log entries
 do {
