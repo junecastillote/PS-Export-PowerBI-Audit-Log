@@ -91,6 +91,7 @@ Begin {
     ## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
     $sessionID = (New-Guid).GUID
     $recordType = 'PowerBIAudit'
+
 }
 
 process {
@@ -99,7 +100,10 @@ process {
         $currentPageResult = Search-UnifiedAuditLog -SessionId $sessionId -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $recordType
         if ($currentPageResult) {
             ## Initialize the maximum results available variable once.
-            if (!$maxResultCount) { $maxResultCount = $($currentPageResult[-1].ResultCount) }
+            if (!$maxResultCount) {
+                $maxResultCount = $($currentPageResult[-1].ResultCount)
+                "Total entries: $($maxResultCount)" | Out-Default
+            }
             ## Set the current page result count.
             $currentPageResultCount = $($currentPageResult[-1].ResultIndex)
             ## Compute the completion percentage
