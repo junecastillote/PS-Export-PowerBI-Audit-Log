@@ -5,7 +5,7 @@
 # $startDate = $endDate.AddHours(-2)
 
 $endDate = (Get-Date -Hour 0 -Minute 0 -Second 0)
-$startDate = (Get-Date $today).AddDays(-1)
+$startDate = (Get-Date $endDate).AddDays(-1)
 
 $outputDirectory = ".\report"
 $orgName = (Get-OrganizationConfig).DisplayName
