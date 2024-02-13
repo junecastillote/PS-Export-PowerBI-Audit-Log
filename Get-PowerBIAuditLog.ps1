@@ -152,9 +152,11 @@ $currentPageResultCount = $($currentPageResult[-1].ResultIndex)
 ## Compute the completion percentage
 $percentComplete = ($currentPageResultCount * 100) / $maxResultCount
 ## Display the progress
-Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
+# Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
+Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
 ## Display the current page results
-$currentPageResult
+$currentPageResult | Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
+
 #EndRegion Initial 100 Records
 
 ## Retrieve the rest of the audit log entries
@@ -166,9 +168,9 @@ do {
         ## Compute the completion percentage
         $percentComplete = ($currentPageResultCount * 100) / $maxResultCount
         ## Display the progress
-        Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
+        Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
         ## Display the current page results
-        $currentPageResult
+        $currentPageResult | Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
     }
 }
 while (
@@ -177,4 +179,4 @@ while (
         ($currentPageResultCount -lt $maxResultCount) -or ($currentPageResult.Count -gt 0)
 )
 
-Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue -Completed
+Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue -Completed
