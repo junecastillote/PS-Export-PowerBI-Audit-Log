@@ -48,7 +48,11 @@ param (
 
     [Parameter(Mandatory, Position = 1)]
     [DateTime]
-    $EndDate
+    $EndDate,
+
+    [Parameter(Position = 2)]
+    [int]
+    $PageSize = 1000
 )
 
 ## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
@@ -85,7 +89,7 @@ catch {
 
 #Region ExtractPBILogs
 Function ExtractPBILogs {
-    Search-UnifiedAuditLog -SessionId $script:sessionID -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $script:recordType
+    Search-UnifiedAuditLog -SessionId $script:sessionID -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $script:recordType -ResultSize $PageSize
 }
 
 #EndRegion
@@ -121,7 +125,7 @@ Function IsResultProblematic {
 
 
 #Region Initial 100 Records
-Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: Getting the first 100 records (0%)" -PercentComplete 0 -ErrorAction SilentlyContinue
+Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: Getting the initial records based on the page size (0%)" -PercentComplete 0 -ErrorAction SilentlyContinue
 do {
     $currentPageResult = @(ExtractPBILogs)
 
@@ -155,7 +159,7 @@ $percentComplete = ($currentPageResultCount * 100) / $maxResultCount
 # Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([int]$percentComplete)%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
 Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
 ## Display the current page results
-$currentPageResult | Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
+$currentPageResult #| Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
 
 #EndRegion Initial 100 Records
 
@@ -170,7 +174,7 @@ do {
         ## Display the progress
         Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
         ## Display the current page results
-        $currentPageResult | Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
+        $currentPageResult #| Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
     }
 }
 while (
