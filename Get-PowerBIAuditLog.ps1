@@ -52,15 +52,15 @@ param (
 
     [Parameter(Position = 2)]
     [int]
-    $PageSize = 1000
+    $PageSize = 500
 )
 
 ## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
-$script:sessionID = (New-Guid).GUID
-$script:recordType = 'PowerBIAudit'
+$sessionID = (New-Guid).GUID
+$recordType = 'PowerBIAudit'
 
-$script:retryCount = 0
-$script:maxRetryCount = 0
+$retryCount = 0
+$maxRetryCount = 2
 
 ## Set progress bar visibility
 $ProgressPreference = 'Continue'
@@ -89,7 +89,7 @@ catch {
 
 #Region ExtractPBILogs
 Function ExtractPBILogs {
-    Search-UnifiedAuditLog -SessionId $script:sessionID -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $script:recordType -ResultSize $PageSize
+    Search-UnifiedAuditLog -SessionId $sessionID -SessionCommand ReturnLargeSet -StartDate $startDate -EndDate $endDate -Formatted -RecordType $recordType -ResultSize $PageSize
 }
 
 #EndRegion
@@ -125,7 +125,7 @@ Function IsResultProblematic {
 
 
 #Region Initial 100 Records
-Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: Getting the initial records based on the page size (0%)" -PercentComplete 0 -ErrorAction SilentlyContinue
+Write-Progress -Activity "Getting Power BI Audit Log [$($StartDate) - $($EndDate)]..." -Status "Progress: Getting the initial $($pageSize) records based on the page size (0%)" -PercentComplete 0 -ErrorAction SilentlyContinue
 do {
     $currentPageResult = @(ExtractPBILogs)
 
@@ -134,18 +134,18 @@ do {
         return $null
     }
 
-    if ($script:retryCount -gt $script:maxRetryCount) {
-        "The result's total count and indexes are problematic after $($script:maxRetryCount) retries. This may be a temporary error. Try again after a few minutes." | Out-Default
+    if ($retryCount -gt $maxRetryCount) {
+        "The result's total count and indexes are problematic after $($maxRetryCount) retries. This may be a temporary error. Try again after a few minutes." | Out-Default
         return $null
     }
 
-    if (($script:isProblematic = IsResultProblematic -inputObject $currentPageResult) -and ($script:retryCount -le $script:maxRetryCount)) {
-        $script:retryCount++
-        $script:sessionID = (New-Guid).Guid
-        "Retry # $($script:retryCount++)" | Out-Default
+    if (($isProblematic = IsResultProblematic -inputObject $currentPageResult) -and ($retryCount -le $maxRetryCount)) {
+        $retryCount++
+        $sessionID = (New-Guid).Guid
+        "Retry # $($retryCount)" | Out-Default
     }
 }
-while ($script:isProblematic)
+while ($isProblematic)
 
 ## Initialize the maximum results available variable once.
 $maxResultCount = $($currentPageResult[-1].ResultCount)
