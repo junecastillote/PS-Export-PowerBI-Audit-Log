@@ -1,3 +1,5 @@
 demo*
 *.csv
 report/
+*.pfx
+*.cer
