@@ -3,3 +3,4 @@ demo*
 report/
 *.pfx
 *.cer
+*.code-workspace
