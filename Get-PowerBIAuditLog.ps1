@@ -103,13 +103,13 @@ Function ExtractPBILogs {
 "Start Date: $($StartDate)" | Out-Default
 "End Date: $($EndDate)" | Out-Default
 
-if ($StartDate -eq $EndDate) {
+if ([datetime]($StartDate) -eq [datetime]$EndDate) {
     "The StartDate and EndDate cannot be the same values." | Out-Default
 
     return $null
 }
 
-if ($EndDate -le $StartDate) {
+if ([datetime]($EndDate) -le [datetime]($StartDate)) {
     "The EndDate value cannot be older than the StartDate value." | Out-Default
 
     return $null
