@@ -80,13 +80,13 @@ try {
 }
 catch [System.Management.Automation.CommandNotFoundException] {
     "It looks like you forgot to connect to Remote Exchange PowerShell. You should do that first before asking me to do stuff for you." | Out-Default
-    $LASTEXITCODE = 1
+
     Return $null
 }
 catch {
     "Something is wrong. You can see the error below. You should fix it before asking me to try again." | Out-Default
     $_.Exception.Message | Out-Default
-    $LASTEXITCODE = 1
+
     Return $null
 }
 #EndRegion
@@ -103,13 +103,13 @@ Function ExtractPBILogs {
 
 if ($StartDate -eq $EndDate) {
     "The StartDate and EndDate cannot be the same values." | Out-Default
-    $LASTEXITCODE = 2
+
     return $null
 }
 
 if ($EndDate -le $StartDate) {
     "The EndDate value cannot be older than the StartDate value." | Out-Default
-    $LASTEXITCODE = 2
+
     return $null
 }
 
