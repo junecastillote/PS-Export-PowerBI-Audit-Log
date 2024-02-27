@@ -43,11 +43,9 @@
 [CmdletBinding()]
 param (
     [Parameter(Mandatory, Position = 0)]
-    [DateTime]
     $StartDate,
 
     [Parameter(Mandatory, Position = 1)]
-    [DateTime]
     $EndDate,
 
     [Parameter(Position = 2)]
