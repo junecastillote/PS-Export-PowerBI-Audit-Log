@@ -56,7 +56,11 @@ param (
 
     [Parameter()]
     [bool]
-    $ShowProgress = $true
+    $ShowProgress = $true,
+
+    [Parameter()]
+    [int]
+    $MaxRetryCount = 3
 )
 
 ## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
@@ -64,7 +68,7 @@ $sessionID = (New-Guid).GUID
 $recordType = 'PowerBIAudit'
 
 $retryCount = 0
-$maxRetryCount = 2
+# $maxRetryCount = 3
 
 ## Set progress bar visibility
 $ProgressPreference = 'Continue'
