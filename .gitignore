@@ -1,0 +1,6 @@
+demo*
+*.csv
+report/
+*.pfx
+*.cer
+*.code-workspace
