@@ -50,7 +50,7 @@ param (
 
     [Parameter(Position = 2)]
     [int]
-    $PageSize = 500,
+    $PageSize = 5000,
 
     [Parameter()]
     [bool]
