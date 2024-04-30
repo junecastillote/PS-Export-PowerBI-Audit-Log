@@ -65,6 +65,16 @@ param (
     $MaxRetryCount = 3
 )
 
+if ([datetime]($StartDate) -eq [datetime]$EndDate) {
+    "The StartDate and EndDate cannot be the same values." | Write-Verbose
+    return $null
+}
+
+if ([datetime]($EndDate) -le [datetime]($StartDate)) {
+    "The EndDate value cannot be older than the StartDate value." | Write-Verbose
+    return $null
+}
+
 ## Function to Split the search period
 Function Split-Time {
     [cmdletbinding()]
@@ -158,19 +168,10 @@ foreach ($period in $SearchPeriod) {
     $sessionID = (New-Guid).GUID
     $searchCounter++
     "Search # $($searchCounter) of $($searchPeriod.Count)" | Write-Verbose
-    "Start Date: $($period.StartDate)" | Write-Verbose
-    "End Date: $($period.EndDate)" | Write-Verbose
+    # "Start Date: $($period.StartDate)" | Write-Verbose
+    # "End Date: $($period.EndDate)" | Write-Verbose
     "Session Id: $($sessionId)" | Write-Verbose
-
-    if ([datetime]($period.StartDate) -eq [datetime]$period.EndDate) {
-        "The StartDate and EndDate cannot be the same values." | Write-Verbose
-        return $null
-    }
-
-    if ([datetime]($EndDate) -le [datetime]($period.StartDate)) {
-        "The EndDate value cannot be older than the StartDate value." | Write-Verbose
-        return $null
-    }
+    $period | Select-Object StartDate, EndDate | Write-Verbose
 
     Function IsResultProblematic {
         param (
