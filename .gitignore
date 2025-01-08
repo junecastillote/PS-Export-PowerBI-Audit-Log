@@ -4,3 +4,4 @@ report/
 *.pfx
 *.cer
 *.code-workspace
+ignore/
