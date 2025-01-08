@@ -130,7 +130,7 @@ Function Split-Time {
 
 ## Define the session ID and record type to use with the Search-UnifiedAuditLog cmdlet.
 $recordType = 'PowerBIAudit'
-$retryCount = 0
+# $retryCount = 0
 # $maxRetryCount = 3
 
 ## Set progress bar visibility
@@ -173,96 +173,20 @@ foreach ($period in $SearchPeriod) {
     "Session Id: $($sessionId)" | Write-Verbose
     $period | Select-Object StartDate, EndDate | Write-Verbose
 
-    Function IsResultProblematic {
-        param (
-            [Parameter(Mandatory)]
-            [ValidateNotNullOrEmpty()]
-            $inputObject
-        )
-        if ($inputObject[-1].ResultIndex -eq -1 -and $inputObject[-1].ResultCount -eq 0) {
-            return $true
-        }
-        else {
-            return $false
-        }
-    }
-
-    #Region Initial Records
-
-    ## This code region retrieves the initial records based on the specified page size.
-    if ($ShowProgress) {
-        Write-Progress -Activity "Getting Power BI Audit Log [$($period.StartDate) - $($EndDate)]..." -Status "Progress: Getting the initial $($pageSize) records based on the page size (0%)" -PercentComplete 0 -ErrorAction SilentlyContinue
-    }
-
-    "Progress: Getting the initial $($pageSize) records based on the page size (0%)" | Write-Verbose
     do {
-        $currentPageResult = @(Search-UnifiedAuditLog -SessionId $sessionID -SessionCommand ReturnLargeSet -StartDate $period.StartDate -EndDate $period.EndDate -Formatted -RecordType $recordType -ResultSize $PageSize)
-
-        if ($currentPageResult.Count -lt 1) {
-            "No results found" | Write-Verbose
-            return $null
+        try {
+            $currentPageResult = @(Search-UnifiedAuditLog -SessionId $sessionID -SessionCommand ReturnLargeSet -StartDate $period.StartDate -EndDate $period.EndDate -Formatted -RecordType $recordType -ResultSize $PageSize -ErrorAction Stop)
+        }
+        catch {
+            Write-Error "Failed to execute search: $_"
+            break
         }
 
-        ## In some instances, the ResultIndex and ResultCount returned shows -1 and 0 respectively.
-        ## When this happens, the output will not be accurate, so the script will retry the retrieval N more times based on the -MaxRetryCount parameter value.
-        if ($retryCount -gt $maxRetryCount) {
-            "The result's total count and indexes are problematic after $($maxRetryCount) retries. This may be a temporary error. Try again after a few minutes." | Write-Verbose
-            return $null
-        }
-
-        if (($isProblematic = IsResultProblematic -inputObject $currentPageResult) -and ($retryCount -le $maxRetryCount)) {
-            $retryCount++
-            $sessionID = (New-Guid).Guid
-            "Retry # $($retryCount)" | Write-Verbose
-        }
-    }
-    while ($isProblematic)
-
-    ## Initialize the maximum results available variable once.
-    $maxResultCount = $($currentPageResult[-1].ResultCount)
-    "Total entries: $($maxResultCount)" | Write-Verbose
-
-    ## Set the current page result count.
-    $currentPageResultCount = $($currentPageResult[-1].ResultIndex)
-    ## Compute the completion percentage
-    $percentComplete = ($currentPageResultCount * 100) / $maxResultCount
-    ## Display the progress
-    if ($ShowProgress) {
-        Write-Progress -Activity "Getting Power BI Audit Log [$($period.StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
-    }
-    "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" | Write-Verbose
-    ## Display the current page results
-    $currentPageResult | Add-Member -MemberType NoteProperty -Name SessionId -Value $sessionID
-    $currentPageResult #| Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
-
-    #EndRegion Initial 100 Records
-
-    ## Retrieve the rest of the audit log entries
-    do {
-        $currentPageResult = @(Search-UnifiedAuditLog -SessionId $sessionID -SessionCommand ReturnLargeSet -StartDate $period.StartDate -EndDate $period.EndDate -Formatted -RecordType $recordType -ResultSize $PageSize)
         if ($currentPageResult) {
-            ## Set the current page result count.
-            $currentPageResultCount = $($currentPageResult[-1].ResultIndex)
-            ## Compute the completion percentage
-            $percentComplete = ($currentPageResultCount * 100) / $maxResultCount
-            ## Display the progress
-            if ($ShowProgress) {
-                Write-Progress -Activity "Getting Power BI Audit Log [$($period.StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue
-            }
-            "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" | Write-Verbose
-            ## Display the current page results
             $currentPageResult | Add-Member -MemberType NoteProperty -Name SessionId -Value $sessionID
-            $currentPageResult #| Select-Object CreationDate, UserIds, Operations, AuditData, ResultIndex
+            $currentPageResult
         }
     }
-    while (
-        ## Continue running while the last ResultIndex in the current page is less than the ResultCount value.
-        ## Note: "ResultIndex" is not ZERO-based.
-        ($currentPageResultCount -lt $maxResultCount) -or ($currentPageResult.Count -gt 0)
-    )
-
-    if ($ShowProgress) {
-        Write-Progress -Activity "Getting Power BI Audit Log [$($period.StartDate) - $($EndDate)]..." -Status "Progress: $($currentPageResultCount) of $($maxResultCount) ($([math]::round($percentComplete,2))%)" -PercentComplete $percentComplete -ErrorAction SilentlyContinue -Completed
-    }
+    while ($currentPageResult.Count -gt 0)
 }
 
