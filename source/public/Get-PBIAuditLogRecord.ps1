@@ -6,7 +6,7 @@ Function Get-PBIAuditLogQueryRecord {
         $Id,
 
         [Parameter()]
-        [ValidateRange(30, ([int]::MaxValue))]
+        [ValidateRange(30, 300)]
         [int]
         $Wait
     )
