@@ -54,15 +54,7 @@ param (
 
     [Parameter()]
     [int]
-    $PageSize = 5000,
-
-    [Parameter()]
-    [bool]
-    $ShowProgress = $true,
-
-    [Parameter()]
-    [int]
-    $MaxRetryCount = 3
+    $PageSize = 5000
 )
 
 if ([datetime]($StartDate) -eq [datetime]$EndDate) {
