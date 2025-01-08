@@ -156,9 +156,11 @@ foreach ($period in $searchPeriod) {
 }
 
 $searchCounter = 0
+# $pageCounter = 0
 foreach ($period in $SearchPeriod) {
     $sessionID = (New-Guid).GUID
     $searchCounter++
+    $pageCounter = 0
     "Search # $($searchCounter) of $($searchPeriod.Count)" | Write-Verbose
     # "Start Date: $($period.StartDate)" | Write-Verbose
     # "End Date: $($period.EndDate)" | Write-Verbose
@@ -167,17 +169,21 @@ foreach ($period in $SearchPeriod) {
 
     do {
         try {
+            $pageCounter++
+            "Search # $($searchCounter), Page # $($pageCounter)" | Write-Verbose
             $currentPageResult = @(Search-UnifiedAuditLog -SessionId $sessionID -SessionCommand ReturnLargeSet -StartDate $period.StartDate -EndDate $period.EndDate -Formatted -RecordType $recordType -ResultSize $PageSize -ErrorAction Stop)
+            $currentPageResult
+            # $currentPageResult = @(Search-UnifiedAuditLog -SessionId $sessionID -HighCompleteness -StartDate $period.StartDate -EndDate $period.EndDate -Formatted -RecordType $recordType -ErrorAction Stop)
         }
         catch {
             Write-Error "Failed to execute search: $_"
             break
         }
 
-        if ($currentPageResult) {
-            $currentPageResult | Add-Member -MemberType NoteProperty -Name SessionId -Value $sessionID
-            $currentPageResult
-        }
+        # if ($currentPageResult) {
+        #     $currentPageResult | Add-Member -MemberType NoteProperty -Name SessionId -Value $sessionID
+        #     $currentPageResult
+        # }
     }
     while ($currentPageResult.Count -gt 0)
 }
