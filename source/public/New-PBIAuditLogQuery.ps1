@@ -12,15 +12,8 @@ Function New-PBIAuditLogQuery {
 
         [Parameter()]
         [string]
-        $SearchName = ("PowerBIAudit Search {0}" -f (Get-Date -Format 'dd-MMM-yyyy HH:mm'))
+        $SearchName = ("PowerBIAudit Search {0}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'))
     )
-
-    # Connect-MgGraph -TenantId jfcgrp.onmicrosoft.com -Scopes AuditLog.Read.All, Directory.Read.All, AuditLogsQuery.Read.All
-
-    ## Set the query period to the previous day
-    # $todayAtZeroHundred = (Get-Date -Hour 0 -Minute 0 -Second 0 -Millisecond 0).ToUniversalTime()
-    # $startDate = ($todayAtZeroHundred).AddDays(-1)  # previous day @ 16:00:00 UTC
-    # $endDate = ($todayAtZeroHundred).AddSeconds(-1)  # next day @ 15:59:59 UTC
 
     $Uri = "https://graph.microsoft.com/beta/security/auditLog/queries"
     # $SearchName = ("Audit Search {0}" -f (Get-Date -Format 'dd-MMM-yyyy HH:mm'))

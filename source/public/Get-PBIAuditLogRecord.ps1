@@ -13,11 +13,12 @@ Function Get-PBIAuditLogQueryRecord {
 
     $InformationPreference = 'Continue'
     $WarningPreference = 'Continue'
+    # $VerbosePreference = 'Continue'
 
     if (!$Wait) {
         $queryjob = Get-PBIAuditLogQuery -Id $Id
         if ($queryjob.status -in @("notStarted", "running")) {
-            "Query status ($($queryjob.id)): [$($queryjob.status)]" | Write-Warning
+            "Query status ($($queryjob.id)) ($($queryjob.displayName)): [$($queryjob.status)]" | Write-Warning
             "Wait for the query to complete before re-retrying, or use the -Wait switch." | Write-Error
             return $null
         }
@@ -27,17 +28,17 @@ Function Get-PBIAuditLogQueryRecord {
         do {
             $queryjob = Get-PBIAuditLogQuery -Id $Id
             if ($queryjob.status -notin @("notStarted", "running")) {
-                "Query status ($($queryjob.id)): [$($queryjob.status)]" | Write-Information
+                "Query status ($($queryjob.id)) ($($queryjob.displayName)): [$($queryjob.status)]" | Write-Information
                 break
             }
 
-            "Query status ($($queryjob.id)): [$($queryjob.status)]" | Write-Information
+            "Query status ($($queryjob.id)) ($($queryjob.displayName)): [$($queryjob.status)]" | Write-Information
             if ($queryjob.status -in @("notStarted", "running")) {
                 "Query status ($($queryjob.id)): [$($queryjob.status)]. Re-checking in $($Wait) seconds." | Write-Information
                 Start-Sleep -Seconds $Wait
             }
             else {
-                "Query status ($($queryjob.id)): [$($queryjob.status)]" | Write-Information
+                "Query status ($($queryjob.id)) ($($queryjob.displayName)): [$($queryjob.status)]" | Write-Information
                 break
             }
         }

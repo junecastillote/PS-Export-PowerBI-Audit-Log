@@ -3,19 +3,31 @@ Function Get-PBIAuditLogQuery {
     param (
         [Parameter()]
         [string]
-        $Id
+        $Id,
+
+        [parameter()]
+        [switch]
+        $IncludeNonPBIAuditQuery
     )
 
     $url = "https://graph.microsoft.com/beta/security/auditLog/queries"
 
     if ($Id) {
-        $url = "https://graph.microsoft.com/beta/security/auditLog/queries/$($Id)"
+        $url = "$url/$($Id)"
     }
 
     try {
-        $queryjob = @(Invoke-MgGraphRequest -Uri $url -OutputType PSObject -ErrorAction Stop)
-        if ($queryjob.value) {
-            $queryjob.value | Where-Object { $_.recordTypeFilters -eq 'PowerBIAudit' }
+        $response = @(Invoke-MgGraphRequest -Uri $url -OutputType PSObject -ErrorAction Stop)
+
+        if ($response.value) {
+            $queryjob = $response.value
+        }
+        else {
+            $queryjob = $response
+        }
+
+        if ($IncludeNonPBIAuditQuery) {
+            $queryjob
         }
         else {
             $queryjob | Where-Object { $_.recordTypeFilters -eq 'PowerBIAudit' }
